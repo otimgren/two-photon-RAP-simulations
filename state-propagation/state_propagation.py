@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--delta", help = "Detuning rate for 2 photon transition at center of microwaves [Hz]", 
                         type = float, default = 1000e3)
     parser.add_argument("--N_steps", help = "Number of timesteps to take", 
-                        type = int, default = 10e3)
+                        type = float, default = 10e3)
     
     args = parser.parse_args()
     
