@@ -106,7 +106,7 @@ def generate_batchfile(options_dict):
     
     #Generate the string to execute
     exec_str = ('dsq --job-file ' + jobs_path + ' --mem-per-cpu ' + memory_per_cpu
-                +' -t ' + time + ' --mail-type '+ mail_type + ' -o /dev/null --batch-file'
+                +' -t ' + time + ' --mail-type '+ mail_type + ' -o /dev/null --batch-file '
                 + batchfile_path)
     print(exec_str)
     
