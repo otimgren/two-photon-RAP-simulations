@@ -102,7 +102,7 @@ def generate_batchfile(options_dict):
     run_dir = options_dict['run_dir']
     jobs_fname = options_dict['jobs_fname']
     jobs_path =run_dir + '/jobs_files/' + jobs_fname
-    batchfile_path = run_dir + '/slurm/' + 'dsq-' +jobs_fname
+    batchfile_path = './slurm/' + 'dsq-' +jobs_fname
     
     #Generate the string to execute
     exec_str = ('dsq --job-file ' + jobs_path + ' --mem-per-cpu ' + memory_per_cpu
