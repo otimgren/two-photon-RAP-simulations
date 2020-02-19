@@ -40,19 +40,23 @@ if __name__ == "__main__":
     parser.add_argument("--ring_z2", help = "Position of electrode 2 [m]", type = float,
                         default = 85.725e-3)
     parser.add_argument("--ring_V1", help = "Voltage on electrode 1 [V]", type = float,
-                        default = 3e3)
+                        default = 4e3)
     parser.add_argument("--ring_V2", help = "Voltage on electrode 2 [V]", type = float,
-                        default = 2.7e2)
+                        default = 3.6e2)
     parser.add_argument("--Omega1", help = "Rabi rate for microwave 1 [Hz]", type = float,
                         default = 200e3)
     parser.add_argument("--Omega2", help = "Rabi rate for microwave 2 [Hz]", type = float,
                         default = 200e3)
-    parser.add_argument("--Delta", help = "Detuning rate for 1 photon transitions at center of microwaves [Hz]",
-                        type = float, default = 1000e3)
-    parser.add_argument("--delta", help = "Detuning rate for 2 photon transition at center of microwaves [Hz]", 
-                        type = float, default = 1000e3)
+    parser.add_argument("--delta1", help = "Detuning rate for microwave 1 at center of microwaves [Hz]",
+                        type = float, default = 0)
+    parser.add_argument("--delta2", help = "Detuning rate for microwave 2 at center of microwaves [Hz]", 
+                        type = float, default = 0)
+    parser.add_argument("--z0_mu1", help = "z-position for microwave 1 [m]", type = float,
+                        default = 0.00)
+    parser.add_argument("--z0_mu2", help = "z-position for microwave 2 [m]", type = float,
+                        default = 0.03)
     parser.add_argument("--N_steps", help = "Number of timesteps to take", 
-                        type = float, default = 10e3)
+                        type = float, default = 1e5)
     
     args = parser.parse_args()
     
@@ -65,8 +69,10 @@ if __name__ == "__main__":
     ring_V2 = args.ring_V2
     Omega1 = 2*np.pi*args.Omega1
     Omega2 = 2*np.pi*args.Omega2
-    Delta = 2*np.pi*args.Delta
-    delta = 2*np.pi*args.delta
+    delta1 = 2*np.pi*args.delta1
+    delta2 = 2*np.pi*args.delta2
+    z0_mu1 = args.z0_mu1
+    z0_mu2 = args.z0_mu2
     N_steps = int(args.N_steps)
     
     #Define the total time for which the molecule is simulated
@@ -121,7 +127,7 @@ if __name__ == "__main__":
     with open("./utility/final_state0to3.pickle", 'rb') as f:
         final_state_approx = pickle.load(f)
         
-    #Find the eigenstate of the Hamiltonian that most closely corresponds to initial_state at T=0. This will be used as the 
+        #Find the eigenstate of the Hamiltonian that most closely corresponds to initial_state at T=0. This will be used as the 
     #actual initial state
     initial_state = find_closest_state(H_0_t(0), initial_state_approx, QN)
     initial_state_vec = initial_state.state_vector(QN)
@@ -134,8 +140,8 @@ if __name__ == "__main__":
     intermediate_state = find_closest_state(H_0_t(0), intermediate_state_approx, QN)
     intermediate_state_vec = intermediate_state.state_vector(QN)
     
-    #Find the energies of ini, int and fin so that suitable microwave frequencies can be calculated
-    H_z0 = H_0_EB(E_r(np.array((0,0,0))), B_r(np.array((0,0,0))))
+    #Find the energies of ini and int so that suitable microwave frequency for mu1 can be calculated
+    H_z0 = H_0_EB(E_r(np.array((0,0,z0_mu1))), B_r(np.array((0,0,z0_mu1))))
     D_z0, V_z0 = np.linalg.eigh(H_z0)
     
     ini_index = find_state_idx_from_state(H_z0, initial_state_approx, QN)
@@ -145,7 +151,20 @@ if __name__ == "__main__":
     #Note: the energies are in 2*pi*[Hz]
     E_ini = D_z0[ini_index]
     E_int = D_z0[int_index]
+    omega_mu1 = E_int - E_ini
+    
+    #Find the energies of int and fin so that suitable microwave frequency for mu2 can be calculated
+    H_z0 = H_0_EB(E_r(np.array((0,0,z0_mu2))), B_r(np.array((0,0,z0_mu2))))
+    D_z0, V_z0 = np.linalg.eigh(H_z0)
+    
+    ini_index = find_state_idx_from_state(H_z0, initial_state_approx, QN)
+    int_index = find_state_idx_from_state(H_z0, intermediate_state_approx, QN)
+    fin_index = find_state_idx_from_state(H_z0, final_state_approx, QN)
+    
+    #Note: the energies are in 2*pi*[Hz]
+    E_int = D_z0[int_index]
     E_fin = D_z0[fin_index]
+    omega_mu2 = E_fin - E_int
     
     #Define dipole moment of TlF
     D_TlF = 2*np.pi*4.2282 * 0.393430307 * 5.291772e-9/4.135667e-15 # [rad/s/(V/cm)]
@@ -162,20 +181,20 @@ if __name__ == "__main__":
     P2 = calculate_power_needed(Omega2, ME2)
     
     #Define the microwave electric field as a function of time
-    E_mu1_t = lambda t: microwave_field(r_t(t), power = P1)
-    E_mu2_t = lambda t: microwave_field(r_t(t), power = P2)
+    E_mu1_t = lambda t: microwave_field(r_t(t), power = P1, z0 = z0_mu1, fwhm=1*0.0254)
+    E_mu2_t = lambda t: microwave_field(r_t(t), power = P2, z0 = z0_mu2, fwhm=1*0.0254)
     
     #Define matrix for microwaves coupling J = 0 to 1
     J1_mu1 = 0
     J2_mu1 = 1
-    omega_mu1 = E_int - E_ini + Delta
+    omega_mu1 = omega_mu1 + delta1
     H1 = make_H_mu(J1_mu1, J2_mu1, omega_mu1, QN)
     H_mu1 = lambda t: H1(0)*D_TlF*E_mu1_t(t)
     
     #Define matrix for microwaves coupling J = 1 to 2
     J1_mu2 = 1
     J2_mu2 = 2
-    omega_mu2 = E_fin - E_int + delta - Delta
+    omega_mu2 = omega_mu2 + delta1
     H2 = make_H_mu(J1_mu2, J2_mu2, omega_mu2, QN)
     H_mu2 = lambda t: H2(0)*D_TlF*E_mu2_t(t)
     
@@ -244,20 +263,18 @@ if __name__ == "__main__":
             D_R, V_R = np.linalg.eigh(H_R)
         
         #Propagate state vector in time
-        psi = V_0 @ U(t+dt) @ V_R @ np.diag(np.exp(-1j*D_R*dt)) @ V_R.conj().T @ U_t.conj().T @ V_0.conj().T @ psi
-        
-        
-    psi_fin = vector_to_state(psi, QN)
-    
+        psi = V_0 @ V_R @ np.diag(np.exp(-1j*D_R*dt)) @ V_R.conj().T @ V_0.conj().T @ psi
+            
     #Calculate overlap between final target state and psi
     overlap = final_state_vec.conj().T@psi
     probability = np.abs(overlap)**2
+
     
     #Append results into file
     with open(args.run_dir + '/results/' + args.result_fname, 'a') as f:
         result_list = [probability, z0, vz, ring_z1, ring_z2, ring_V1, 
-                       ring_V2, Omega1/2*np.pi, Omega2/2*np.pi, Delta/2*np.pi,
-                       delta/2*np.pi, N_steps]
+                       ring_V2, Omega1/2*np.pi, Omega2/2*np.pi, delta1/2*np.pi,
+                       delta2/2*np.pi, z0_mu1, z0_mu2, N_steps]
         results_list = ["{:.7e}".format(value) for value in result_list]
         results_str = "\t\t".join(results_list)
         print(results_str, file = f)

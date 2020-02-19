@@ -26,8 +26,9 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
                  ring_V1 = 4e3, ring_V2 = 3.6e2,
                  B_earth = np.array((0,0,0)),
                  Omega1 = 2*np.pi*200e3, Omega2 = 2*np.pi*200e3,
-                 Delta = 2*np.pi*2e6, delta = 0,
-                 N_steps = 100e3):
+                 Delta = 0, delta = 0,
+                 z0_mu1 = 0.0, z0_mu2 = 0.03,
+                 N_steps = 1e5):
     """
     Function that runs the rapid adiabatic passage simulation for the given 
     parameters
@@ -40,6 +41,15 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
     ring_V1 = voltage on ring 1 [V]
     ring_V2 = voltage on ring 2 [V]
     B_earth = magnetic field of earth [G]
+    Omega1 = Rabi rate for microwave 1 [rad/s]
+    Omega2 = Rabi rate for microwave 2 [rad/s]
+    Delta = 1-photon detuning [rad/s]
+    delta = 2-photon detuning [rad/s]
+    z0_mu1 = z-position of microwave 1 [m]
+    z0_mu2 = z-position of microwave 2 [m]
+    
+    returns:
+    probability = probability of being in the target final state
     
     """
     
@@ -100,8 +110,8 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
     intermediate_state = find_closest_state(H_0_t(0), intermediate_state_approx, QN)
     intermediate_state_vec = intermediate_state.state_vector(QN)
     
-    #Find the energies of ini, int and fin so that suitable microwave frequencies can be calculated
-    H_z0 = H_0_EB(E_r(np.array((0,0,0))), B_r(np.array((0,0,0))))
+    #Find the energies of ini and int so that suitable microwave frequency for mu1 can be calculated
+    H_z0 = H_0_EB(E_r(np.array((0,0,z0_mu1))), B_r(np.array((0,0,z0_mu1))))
     D_z0, V_z0 = np.linalg.eigh(H_z0)
     
     ini_index = find_state_idx_from_state(H_z0, initial_state_approx, QN)
@@ -111,7 +121,21 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
     #Note: the energies are in 2*pi*[Hz]
     E_ini = D_z0[ini_index]
     E_int = D_z0[int_index]
+    omega_mu1 = E_int - E_ini
+    
+    #Find the energies of int and fin so that suitable microwave frequency for mu2 can be calculated
+    H_z0 = H_0_EB(E_r(np.array((0,0,z0_mu2))), B_r(np.array((0,0,z0_mu2))))
+    D_z0, V_z0 = np.linalg.eigh(H_z0)
+    
+    ini_index = find_state_idx_from_state(H_z0, initial_state_approx, QN)
+    int_index = find_state_idx_from_state(H_z0, intermediate_state_approx, QN)
+    fin_index = find_state_idx_from_state(H_z0, final_state_approx, QN)
+    
+    #Note: the energies are in 2*pi*[Hz]
+    E_int = D_z0[int_index]
     E_fin = D_z0[fin_index]
+    omega_mu2 = E_fin - E_int
+
     
     #Define dipole moment of TlF
     D_TlF = 2*np.pi*4.2282 * 0.393430307 * 5.291772e-9/4.135667e-15 # [rad/s/(V/cm)]
@@ -127,20 +151,20 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
     P2 = calculate_power_needed(Omega2, ME2)
     
     #Define the microwave electric field as a function of time
-    E_mu1_t = lambda t: microwave_field(r_t(t), power = P1)
-    E_mu2_t = lambda t: microwave_field(r_t(t), power = P2)
+    E_mu1_t = lambda t: microwave_field(r_t(t), power = P1, z0 = z0_mu1, fwhm=1.1*0.0254)
+    E_mu2_t = lambda t: microwave_field(r_t(t), power = P2, z0 = z0_mu2, fwhm=1.1*0.0254)
     
     #Define matrix for microwaves coupling J = 0 to 1
     J1_mu1 = 0
     J2_mu1 = 1
-    omega_mu1 = E_int - E_ini + Delta
+    omega_mu1 = omega_mu1 + Delta
     H1 = make_H_mu(J1_mu1, J2_mu1, omega_mu1, QN)
     H_mu1 = lambda t: H1(0)*D_TlF*E_mu1_t(t)
     
     #Define matrix for microwaves coupling J = 1 to 2
     J1_mu2 = 1
     J2_mu2 = 2
-    omega_mu2 = E_fin - E_int + delta - Delta
+    omega_mu2 = omega_mu2 + delta - Delta
     H2 = make_H_mu(J1_mu2, J2_mu2, omega_mu2, QN)
     H_mu2 = lambda t: H2(0)*D_TlF*E_mu2_t(t)
     
@@ -163,7 +187,7 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
     
     
     #Loop over timesteps to evolve system in time
-    for i, t in enumerate(tqdm(t_array)):
+    for i, t in enumerate(t_array):
         #Calculate the necessary Hamiltonians at this time
         H_0 = H_0_t(t)
         H_mu1_i = H_mu1(t)
@@ -209,7 +233,7 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
             D_R, V_R = np.linalg.eigh(H_R)
         
         #Propagate state vector in time
-        psi = V_0 @ U(t+dt) @ V_R @ np.diag(np.exp(-1j*D_R*dt)) @ V_R.conj().T @ U_t.conj().T @ V_0.conj().T @ psi
+        psi = V_0 @ V_R @ np.diag(np.exp(-1j*D_R*dt)) @ V_R.conj().T @ V_0.conj().T @ psi
         
         
     psi_fin = vector_to_state(psi, QN)
