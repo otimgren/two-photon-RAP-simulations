@@ -269,7 +269,7 @@ if __name__ == "__main__":
         psi = V_0 @ V_R @ np.diag(np.exp(-1j*D_R*dt)) @ V_R.conj().T @ V_0.conj().T @ psi
             
     #Calculate overlap between final target state and psi
-    overlap = final_state_vec.conj().T@psi
+    overlap = final_state_vec.conj().T@  U(T) @  psi
     probability = np.abs(overlap)**2
 
     
