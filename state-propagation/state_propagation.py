@@ -21,6 +21,7 @@ import numpy as np
 import json
 from scipy.linalg.lapack import zheevd
 from scipy.linalg import block_diag
+from tqdm import tqdm
 
 if __name__ == "__main__":
     #Get path info and electric field parameters from command line
@@ -207,7 +208,6 @@ if __name__ == "__main__":
     D = lambda t: D1 + D2
     
     #Define number of timesteps and make a time-array
-    t_array = np.linspace(0,T,N_steps)
     
     #Calculate timestep
     dt = T/N_steps
@@ -217,7 +217,10 @@ if __name__ == "__main__":
 
     
     #Loop over timesteps to evolve system in time
-    for i, t in enumerate(t_array):
+    for i in enumerate(tqdm(range(0, N_steps))):
+        #Calculate the time
+        t = (i+1)*dt
+        
         #Calculate the necessary Hamiltonians at this time
         H_0 = H_0_t(t)
         H_mu1_i = H_mu1(t)
