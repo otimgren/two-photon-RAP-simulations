@@ -23,7 +23,7 @@ from tqdm.notebook import tqdm
 
 def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
                  ring_z1 = -71.4375e-3, ring_z2 = 85.725e-3,
-                 ring_V1 = 1e3, ring_V2 = 0.9e2,
+                 ring_V1 = 4e3, ring_V2 = 3.6e2,
                  B_earth = np.array((0,0,0)),
                  Omega1 = 2*np.pi*200e3, Omega2 = 2*np.pi*200e3,
                  Delta = 2*np.pi*2e6, delta = 0,
