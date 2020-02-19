@@ -116,15 +116,15 @@ if __name__ == "__main__":
     dim = H_0_t(0).shape[0]
     
     #Fetch the initial state from file
-    with open("./utility/initial_state0to3.pickle", 'rb') as f:
+    with open(args.run_dir+"/utility/initial_state0to3.pickle", 'rb') as f:
         initial_state_approx = pickle.load(f)
     
     #Fetch the intermediate state from file
-    with open("./utility/intermediate_state0to3.pickle", "rb") as f:
+    with open(args.run_dir+"/utility/intermediate_state0to3.pickle", "rb") as f:
         intermediate_state_approx = pickle.load(f)
         
     #Fetch the final state from file
-    with open("./utility/final_state0to3.pickle", 'rb') as f:
+    with open(args.run_dir+"/utility/final_state0to3.pickle", 'rb') as f:
         final_state_approx = pickle.load(f)
         
         #Find the eigenstate of the Hamiltonian that most closely corresponds to initial_state at T=0. This will be used as the 
