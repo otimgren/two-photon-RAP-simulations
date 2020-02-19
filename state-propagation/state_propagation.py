@@ -6,8 +6,8 @@ Created on Wed Feb 12 13:38:22 2020
 """
 
 import sys
-sys.path.append('../molecular-state-classes-and-functions/')
-sys.path.append('../utility/')
+sys.path.append('./molecular-state-classes-and-functions/')
+sys.path.append('./utility/')
 from functions import make_QN, make_hamiltonian, make_transform_matrix, find_closest_state
 from EM_fields import E_field_ring, calculate_power_needed, microwave_field
 from matrix_element_functions import calculate_microwave_ED_matrix_element_mixed_state_uncoupled
