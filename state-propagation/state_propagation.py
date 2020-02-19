@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
     
     #Loop over timesteps to evolve system in time
-    for i in enumerate(tqdm(range(0, N_steps))):
+    for i in tqdm(range(0, N_steps)):
         #Calculate the time
         t = (i+1)*dt
         
