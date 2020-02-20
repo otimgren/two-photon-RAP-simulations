@@ -102,7 +102,8 @@ if __name__ == "__main__":
     E_t = lambda t: E_r(r_t(t))
     
     #Define the magnetic field
-    B_earth = np.array((0,0,0))
+    B_earth = np.array((0.2, 0.45, 0.1))
+    #B_earth = np.array((0,0,0))
     B_r = lambda r: B_earth
     B_t = lambda t: B_r(r_t(t))
     

@@ -237,7 +237,7 @@ def simulate_RAP(r0 = np.array((0,0,-100e-3)), v = np.array((0,0,200)),
     psi_fin = vector_to_state(psi, QN)
     
     #Calculate overlap between final target state and psi
-    overlap = final_state_vec.conj().T@psi
+    overlap = final_state_vec.conj().T@  U(T) @  psi
     probability = np.abs(overlap)**2
         
     return probability
